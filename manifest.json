@@ -1,0 +1,24 @@
+{
+  "name": "Arisan App Premium",
+  "short_name": "Arisan App",
+  "description": "Aplikasi arisan online modern dengan sistem cicilan dan kocokan otomatis",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#4f46e5",
+  "background_color": "#f8fafc",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
