@@ -6,7 +6,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#4f46e5">
+  
+  <!-- MANIFEST (path relatif) -->
   <link rel="manifest" href="manifest.json">
+  
   <title>Arisan App - Premium</title>
   <style>
     * {
@@ -46,14 +49,11 @@
       transition: opacity 0.3s ease;
       white-space: nowrap;
     }
-    .offline-note {
-      display: none;
-    }
     @media (max-width: 600px) {
       .loading { font-size: 0.9rem; padding: 10px 20px; white-space: normal; text-align: center; width: 80%; }
     }
 
-    /* --- Tombol Install Manual --- */
+    /* TOMBOL INSTALL */
     #installButton {
       position: fixed;
       bottom: 20px;
@@ -69,12 +69,13 @@
       box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
       cursor: pointer;
       z-index: 10000;
-      display: none; /* Awalnya disembunyikan */
+      display: none;
       align-items: center;
       gap: 8px;
       backdrop-filter: blur(4px);
       border: 1px solid rgba(255,255,255,0.2);
       transition: transform 0.2s, box-shadow 0.2s;
+      pointer-events: auto;
     }
     #installButton:hover {
       transform: translateY(-2px);
@@ -83,12 +84,10 @@
     #installButton:active {
       transform: translateY(0);
     }
-    /* Ikon sederhana dengan pseudo-element */
     #installButton::before {
       content: "📲";
       font-size: 20px;
     }
-    /* Untuk mode standalone, tombol tetap disembunyikan */
     @media (display-mode: standalone) {
       #installButton {
         display: none !important;
@@ -99,20 +98,20 @@
 <body>
   <div class="loading" id="loadingIndicator">Memuat aplikasi...</div>
   
-  <!-- Tombol Install -->
+  <!-- TOMBOL INSTALL -->
   <button id="installButton">Install Aplikasi</button>
 
   <iframe 
     id="appFrame"
     src="https://script.google.com/macros/s/AKfycbzCvvye_fbtf2vuCOZJpsDGtatnOsdfBCXxF3gs5aUlNU1WKZjmPcQ3ACkJWvFFpWzq/exec"
     title="Aplikasi Arisan"
-    allow="camera; microphone; clipboard-read; clipboard-write; contacts; geolocation; autoplay"
+    allow="camera; microphone; clipboard-read; clipboard-write; geolocation; autoplay"
     allowfullscreen="true"
     loading="eager">
   </iframe>
 
   <script>
-    // --- Logika Loading Iframe ---
+    // --- Loading Iframe ---
     const iframe = document.getElementById('appFrame');
     const loader = document.getElementById('loadingIndicator');
     
@@ -131,61 +130,61 @@
       loader.style.width = 'auto';
     });
 
-    // --- Registrasi Service Worker ---
+    // --- REGISTRASI SERVICE WORKER (PATH RELATIF) ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-          console.log('Service Worker registered', reg);
-        }).catch(err => {
-          console.log('Service Worker registration failed', err);
-        });
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('✅ Service Worker registered', reg))
+          .catch(err => console.log('❌ Service Worker registration failed', err));
       });
     }
 
-    // --- Logika Tombol Install Manual (PWA) ---
+    // --- LOGIKA TOMBOL INSTALL PWA ---
     let deferredPrompt;
     const installButton = document.getElementById('installButton');
 
-    // Cegah tombol muncul jika sudah dalam mode standalone (sudah diinstal)
+    // Jangan tampilkan jika sudah standalone
     if (window.matchMedia('(display-mode: standalone)').matches) {
       installButton.style.display = 'none';
     }
 
     window.addEventListener('beforeinstallprompt', (e) => {
-      // Mencegah prompt otomatis muncul (kita kendalikan manual)
       e.preventDefault();
-      // Simpan event untuk dipakai nanti
       deferredPrompt = e;
-      // Tampilkan tombol install
-      installButton.style.display = 'flex'; // gunakan flex karena ada gap & pseudo-element
-      console.log('✅ beforeinstallprompt fired, tombol install muncul');
+      installButton.style.display = 'flex';
+      console.log('✅ beforeinstallprompt fired, tombol muncul');
     });
 
     installButton.addEventListener('click', async () => {
       if (!deferredPrompt) {
-        // Fallback: panduan instalasi manual untuk browser yang tidak support
-        alert('Untuk menginstal aplikasi, buka menu browser dan pilih "Tambahkan ke Layar Utama" atau "Install app".');
+        alert('Untuk menginstal, gunakan menu "Tambahkan ke Layar Utama" di browser Anda.');
         return;
       }
-      // Tampilkan dialog instalasi
       deferredPrompt.prompt();
-      // Tunggu hasil pilihan user
       const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to install prompt: ${outcome}`);
-      // Bersihkan deferredPrompt
+      console.log(`User response: ${outcome}`);
       deferredPrompt = null;
-      // Sembunyikan tombol setelah prompt ditampilkan
       installButton.style.display = 'none';
     });
 
-    // Jika aplikasi berhasil diinstal, sembunyikan tombol
     window.addEventListener('appinstalled', () => {
       console.log('🎉 Aplikasi berhasil diinstal');
       installButton.style.display = 'none';
       deferredPrompt = null;
     });
 
-    // Opsional: jika navigasi online/offline, tombol tetap berfungsi
+    // Fallback: jika setelah 3 detik tombol belum muncul & bukan standalone,
+    // tampilkan tombol dengan panduan manual (untuk iOS dll)
+    setTimeout(() => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      if (installButton.style.display === 'none' && !isStandalone) {
+        installButton.style.display = 'flex';
+        installButton.textContent = '📲 Tambah ke Layar Utama';
+        installButton.onclick = () => {
+          alert('Buka menu browser (⋮) lalu pilih "Tambahkan ke Layar Utama" atau "Install app".');
+        };
+      }
+    }, 3000);
   </script>
 </body>
 </html>
