@@ -52,10 +52,56 @@
     @media (max-width: 600px) {
       .loading { font-size: 0.9rem; padding: 10px 20px; white-space: normal; text-align: center; width: 80%; }
     }
+
+    /* --- Tombol Install Manual --- */
+    #installButton {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 24px;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+      cursor: pointer;
+      z-index: 10000;
+      display: none; /* Awalnya disembunyikan */
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #installButton:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(79, 70, 229, 0.4);
+    }
+    #installButton:active {
+      transform: translateY(0);
+    }
+    /* Ikon sederhana dengan pseudo-element */
+    #installButton::before {
+      content: "📲";
+      font-size: 20px;
+    }
+    /* Untuk mode standalone, tombol tetap disembunyikan */
+    @media (display-mode: standalone) {
+      #installButton {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="loading" id="loadingIndicator">Memuat aplikasi...</div>
+  
+  <!-- Tombol Install -->
+  <button id="installButton">Install Aplikasi</button>
+
   <iframe 
     id="appFrame"
     src="https://script.google.com/macros/s/AKfycbzCvvye_fbtf2vuCOZJpsDGtatnOsdfBCXxF3gs5aUlNU1WKZjmPcQ3ACkJWvFFpWzq/exec"
@@ -66,7 +112,7 @@
   </iframe>
 
   <script>
-    // Sembunyikan loading setelah iframe selesai dimuat
+    // --- Logika Loading Iframe ---
     const iframe = document.getElementById('appFrame');
     const loader = document.getElementById('loadingIndicator');
     
@@ -85,7 +131,7 @@
       loader.style.width = 'auto';
     });
 
-    // Registrasi Service Worker untuk PWA
+    // --- Registrasi Service Worker ---
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then(reg => {
@@ -95,6 +141,51 @@
         });
       });
     }
+
+    // --- Logika Tombol Install Manual (PWA) ---
+    let deferredPrompt;
+    const installButton = document.getElementById('installButton');
+
+    // Cegah tombol muncul jika sudah dalam mode standalone (sudah diinstal)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      installButton.style.display = 'none';
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Mencegah prompt otomatis muncul (kita kendalikan manual)
+      e.preventDefault();
+      // Simpan event untuk dipakai nanti
+      deferredPrompt = e;
+      // Tampilkan tombol install
+      installButton.style.display = 'flex'; // gunakan flex karena ada gap & pseudo-element
+      console.log('✅ beforeinstallprompt fired, tombol install muncul');
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (!deferredPrompt) {
+        // Fallback: panduan instalasi manual untuk browser yang tidak support
+        alert('Untuk menginstal aplikasi, buka menu browser dan pilih "Tambahkan ke Layar Utama" atau "Install app".');
+        return;
+      }
+      // Tampilkan dialog instalasi
+      deferredPrompt.prompt();
+      // Tunggu hasil pilihan user
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to install prompt: ${outcome}`);
+      // Bersihkan deferredPrompt
+      deferredPrompt = null;
+      // Sembunyikan tombol setelah prompt ditampilkan
+      installButton.style.display = 'none';
+    });
+
+    // Jika aplikasi berhasil diinstal, sembunyikan tombol
+    window.addEventListener('appinstalled', () => {
+      console.log('🎉 Aplikasi berhasil diinstal');
+      installButton.style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    // Opsional: jika navigasi online/offline, tombol tetap berfungsi
   </script>
 </body>
 </html>
